@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Jobs\ImportCSVJob;
+use App\Enums\Paths;
 
 class ImportCSVCommand extends Command
 {
@@ -26,6 +27,12 @@ class ImportCSVCommand extends Command
      */
     public function handle()
     {
+        if (!file_exists(storage_path(Paths::PRICE))) { 
+            die('File not found: ' . Paths::PRICE);
+        } else if (!file_exists(storage_path(Paths::STOCK))) {
+            die('File not found: ' . Paths::STOCK);
+        }
+        
         ImportCSVJob::dispatch();
     }
 }
