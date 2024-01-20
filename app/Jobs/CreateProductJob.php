@@ -10,16 +10,16 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Product;
 
-class UpdateStockLevelJob implements ShouldQueue
+class CreateProductJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(public $row)
+    public function __construct(public $product_data)
     {
-        $this->row = $row;
+        $this->product_data = $product_data;
     }
 
     /**
@@ -32,10 +32,9 @@ class UpdateStockLevelJob implements ShouldQueue
         }
 
         try {
-            /* Only updates if product exists */
-            Product::where('supplier_product_id', $this->row[0])->update(['stock_level' => $this->row[1]]);
+            Product::create($this->product_data);
         } catch (\Exception $e) {
-            $this->fail($e->getMessage());
+            $this->fail($e->getMessage() . ', product data: ' . implode(',', $this->product_data));
         }
     }
 }

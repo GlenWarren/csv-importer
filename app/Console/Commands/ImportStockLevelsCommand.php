@@ -34,7 +34,7 @@ class ImportStockLevelsCommand extends Command
 
         $handle = fopen(storage_path(Paths::STOCK), 'r');
 
-        $batch = Bus::batch([])->allowFailures()->dispatch();
+        $batch = Bus::batch([])->dispatch();
 
         $jobs = [];
 

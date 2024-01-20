@@ -4,12 +4,14 @@ namespace App\Jobs;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Bus\Batchable;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use App\Enums\Paths;
 use App\Models\Product;
+use App\Jobs\CreateProductJob;
 
 class ImportProductsJob implements ShouldQueue
 {
@@ -31,9 +33,10 @@ class ImportProductsJob implements ShouldQueue
         $handle = fopen(storage_path(Paths::PRICE), 'r');
 
         $first_iteration = true;
-        $chunk_size = 1000;
-        $data_chunk = [];
         $column_titles = [];
+        $jobs = [];
+
+        $batch = Bus::batch([])->dispatch();
 
         while (($row_string = fgets($handle)) !== false) {
             /* Fetch the column titles, only on the first iteration */
@@ -43,33 +46,44 @@ class ImportProductsJob implements ShouldQueue
                 continue;
             }
 
-            /* Extracting all row data */
-            $row = explode("\t", $row_string);
-            $row_data = [];
-            foreach ($column_titles as $index => $title) {
-                $row_data[$title] = $row[$index];
-            }
+            $new_product_data = $this->prepareData($row_string, $column_titles);
+            $jobs[] = new CreateProductJob($new_product_data);
 
-            /* Preparing data to store */
-            $row_data_to_load = [];
-            foreach (Product::CSV_TITLES_TO_COLUMNS_MAP as $title => $column) {
-                if (!isset($row_data[$title])) {
-                    $this->fail("File is missing the following column title: '$title'");
-                }
-                $row_data_to_load[$column] = $row_data[$title];
-            }
-            $now = now();
-            $row_data_to_load['created_at'] = $now;
-            $row_data_to_load['updated_at'] = $now;
-            array_push($data_chunk, $row_data_to_load);
-
-            /* Store data in our DB in chunks */
-            if (count($data_chunk) >= $chunk_size) {
-                Product::insertOrIgnore($data_chunk);
-                $data_chunk = [];
+            /* Hydrating jobs 1000 at a time */
+            if (count($jobs) >= 1000) {
+                /* Job batch data stored in DB table job_batches */
+                $batch->add($jobs);
+                $jobs = [];
             }
         }
+
+        /* Hydrate remaining jobs */
+        $batch->add($jobs);
         
         fclose($handle);
+    }
+
+    private function prepareData(string $row_string, array $column_titles): array
+    {
+        /* Organising all row data */
+        $row = explode("\t", $row_string);
+        $row_data = [];
+        foreach ($column_titles as $index => $title) {
+            $row_data[$title] = $row[$index];
+        }
+
+        /* Extracting relevant data */
+        $new_product_data = [];
+        foreach (Product::CSV_TITLES_TO_COLUMNS_MAP as $title => $column) {
+            if (!isset($row_data[$title])) {
+                $this->fail("File is missing the following column title: '$title'");
+            }
+            $new_product_data[$column] = $row_data[$title];
+        }
+        $now = now();
+        $new_product_data['created_at'] = $now;
+        $new_product_data['updated_at'] = $now;
+
+        return $new_product_data;
     }
 }
