@@ -26,6 +26,7 @@ class Kernel extends ConsoleKernel
     // }
 
     protected $commands = [
-        \App\Console\Commands\ImportCSVCommand::class,
+        \App\Console\Commands\ImportProductsCommand::class,
+        \App\Console\Commands\ImportStockLevelsCommand::class,
     ];
 }

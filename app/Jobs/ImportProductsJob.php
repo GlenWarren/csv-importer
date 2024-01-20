@@ -11,7 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Enums\Paths;
 use App\Models\Product;
 
-class ImportCSVJob implements ShouldQueue
+class ImportProductsJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -28,33 +28,12 @@ class ImportCSVJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $handle = fopen(storage_path(Paths::STOCK), 'r');
-
-        $stock_levels = [];
-        while (($row_string = fgets($handle)) !== false) {
-
-            $row = explode("\t", $row_string);
-
-            if ($row[1] > 0) {
-                $stock_levels[$row[0]] = $row[1];
-            }
-        }
-
-        fclose($handle);
-
         $handle = fopen(storage_path(Paths::PRICE), 'r');
+
         $first_iteration = true;
         $chunk_size = 1000;
-
-        /* Mapping CSV column titles that we want to extract data for, to corresponding DB columns */
-        $titles_to_columns_map = [
-            'ManProdNr' => 'sku',
-            'ProdNr' => 'supplier_product_id',
-            'TradePrice' => 'cost_price',
-            'RRP' => 'rrp'
-        ];
-
         $data_chunk = [];
+        $column_titles = [];
 
         while (($row_string = fgets($handle)) !== false) {
             /* Fetch the column titles, only on the first iteration */
@@ -73,22 +52,15 @@ class ImportCSVJob implements ShouldQueue
 
             /* Preparing data to store */
             $row_data_to_load = [];
-            foreach ($titles_to_columns_map as $title => $column) {
+            foreach (Product::CSV_TITLES_TO_COLUMNS_MAP as $title => $column) {
+                if (!isset($row_data[$title])) {
+                    $this->fail("File is missing the following column title: '$title'");
+                }
                 $row_data_to_load[$column] = $row_data[$title];
-
-                $now = now();
-                $row_data_to_load['created_at'] = $now;
-                $row_data_to_load['updated_at'] = $now;
-
-                /* Add stock level if set */
-                if ($column === 'supplier_product_id') {
-                    if (isset($stock_levels[$row_data[$title]])) {
-                        $row_data_to_load['stock_level'] = $stock_levels[$row_data[$title]];
-                    } else {
-                        $row_data_to_load['stock_level'] = 0;
-                    }
-                };
             }
+            $now = now();
+            $row_data_to_load['created_at'] = $now;
+            $row_data_to_load['updated_at'] = $now;
             array_push($data_chunk, $row_data_to_load);
 
             /* Store data in our DB in chunks */

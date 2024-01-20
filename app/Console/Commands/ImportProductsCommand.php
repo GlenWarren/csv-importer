@@ -3,24 +3,24 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Jobs\ImportCSVJob;
+use App\Jobs\ImportProductsJob;
 use App\Enums\Paths;
 
-class ImportCSVCommand extends Command
+class ImportProductsCommand extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'app:import-csv';
+    protected $signature = 'app:import-products';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Import data from CSV';
+    protected $description = 'Import products data from CSV';
 
     /**
      * Execute the console command.
@@ -29,10 +29,8 @@ class ImportCSVCommand extends Command
     {
         if (!file_exists(storage_path(Paths::PRICE))) { 
             die('File not found: ' . Paths::PRICE);
-        } else if (!file_exists(storage_path(Paths::STOCK))) {
-            die('File not found: ' . Paths::STOCK);
         }
-        
-        ImportCSVJob::dispatch();
+
+        ImportProductsJob::dispatch();
     }
 }
