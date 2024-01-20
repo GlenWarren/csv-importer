@@ -15,11 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('sku')->unique('sku'); // (ManProdNr)
             $table->unsignedInteger('supplier_product_id')->unique('supplier_product_id'); // (ProdNr)
-            $table->decimal('cost_price', 10, 2)->default(0.00); // (Trade Price)
+            $table->decimal('cost_price', 10, 2)->default(0.00); // (TradePrice)
             $table->decimal('rrp', 10, 2)->default(0.00); // (RRP)
             $table->unsignedInteger('stock_level')->default(0); // (Found in Stock File, under supplier_product_id/ProdNr)
             $table->timestamps();
-            // $table->unique(['sku','supplier_product_id'], 'sku_supplier_product_id_index');
         });
     }
 

@@ -16,4 +16,11 @@ class Product extends Model
         'rrp',
         'stock_level'
     ];
+
+    const CSV_TITLES_TO_COLUMNS_MAP = [
+        'ManProdNr' => 'sku',
+        'ProdNr' => 'supplier_product_id',
+        'TradePrice' => 'cost_price',
+        'RRP' => 'rrp'
+    ];
 }
